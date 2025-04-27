@@ -27,14 +27,14 @@ def create_fixed_layout(complete_graph: Dict[str, Dict[str, float]]) -> Dict[str
     
     # Generate layout once
     return nx.spring_layout(G, k=1.5, iterations=50, seed=42)
-
 def plot_graph(distances: Dict[str, Dict[str, float]], 
               path: List[str] = None,
               show_distances: bool = True,
               figsize: tuple = (12, 8),
-              pos: Dict[str, tuple] = None):
+              pos: Dict[str, tuple] = None,
+              line_config: Dict[str, Dict[str, any]] = None):
     """
-    Plot the graph with optional path highlighting.
+    Plot the graph with metro lines, optional path highlighting and distances.
     
     Args:
         distances: Dictionary of distances between nodes
@@ -42,6 +42,7 @@ def plot_graph(distances: Dict[str, Dict[str, float]],
         show_distances: Whether to show distance labels on edges
         figsize: Figure size as (width, height) tuple
         pos: Fixed positions for nodes
+        line_config: Optional dictionary containing line configurations with colors
     """
     # Create graph
     G = nx.Graph()
@@ -57,9 +58,30 @@ def plot_graph(distances: Dict[str, Dict[str, float]],
     # Use provided positions or generate new ones
     if pos is None:
         pos = nx.spring_layout(G, k=1.5, iterations=50)
-    
-    # Draw edges first (background)
-    nx.draw_networkx_edges(G, pos, edge_color='gray', alpha=0.5)
+
+    nx.draw_networkx_edges(G, pos, edge_color='gray', alpha=0.3, width=1)
+        
+    # Draw metro lines if configuration is provided
+    if line_config:
+        line_colors = {'R': 'red', 'G': 'green', 'B': 'blue', 'Y': 'yellow'}
+        
+        # For each edge in distances, check if it belongs to a metro line
+        for station1, neighbors in distances.items():
+            for station2 in neighbors:
+                # Find which line (if any) this connection belongs to
+                for line_id, config in line_config.items():
+                    stations = config['stations']
+                    # Check if both stations are in this line and consecutive
+                    if station1 in stations and station2 in stations:
+                        color = line_colors.get(line_id, 'black')
+                        nx.draw_networkx_edges(G, pos,
+                                                edgelist=[(station1, station2)],
+                                                edge_color=color,
+                                                width=2,
+                                                alpha=0.7)
+    else:
+        # Draw regular edges if no line configuration
+        nx.draw_networkx_edges(G, pos, edge_color='gray', alpha=0.5)
     
     # Draw edge labels if requested
     if show_distances:
@@ -72,67 +94,37 @@ def plot_graph(distances: Dict[str, Dict[str, float]],
                           node_size=700,
                           alpha=0.7)
     
-    # Draw city labels
+    # Draw station labels
     nx.draw_networkx_labels(G, pos, font_size=10, font_weight='bold')
     
     # If path is provided, highlight it
-    if path and len(path) > 1:
-        # Create edges pairs from path
+    if path and len(path) > 1 and line_config:
         path_edges = list(zip(path[:-1], path[1:]))
+        line_colors = {'R': 'red', 'G': 'green', 'B': 'blue', 'Y': 'yellow'}
         
-        # Highlight the path edges
-        nx.draw_networkx_edges(G, pos,
-                             edgelist=path_edges,
-                             edge_color='red',
-                             width=2)
+        for station1, station2 in path_edges:
+            # Find which line this edge belongs to
+            for line_id, config in line_config.items():
+                stations = config['stations']
+                if station1 in stations and station2 in stations:
+                    idx1, idx2 = stations.index(station1), stations.index(station2)
+                    if abs(idx1 - idx2) == 1:  # stations are consecutive in the line
+                        color = line_colors.get(line_id, 'red')
+                        # Draw highlighted edge with line's color
+                        nx.draw_networkx_edges(G, pos,
+                                            edgelist=[(station1, station2)],
+                                            edge_color=color,
+                                            width=4,  # thicker for highlighting
+                                            alpha=1.0)  # full opacity for highlight
         
-        # Highlight path nodes
+        # Highlight stations in path
         nx.draw_networkx_nodes(G, pos,
                              nodelist=path,
                              node_color='lightgreen',
                              node_size=700,
                              alpha=0.7)
     
-    plt.title("Graph", pad=20, fontsize=14)
+    plt.title("Metro Network", pad=20, fontsize=14)
     plt.axis('off') 
-    plt.tight_layout()
-    plt.show()
-
-def plot_lines_with_colors(line_config: Dict[str, Dict[str, any]], pos: Dict[str, tuple]):
-    """
-    Plot the lines with their respective colors based on the line configuration.
-    
-    Args:
-        line_config: Dictionary containing line configurations with colors
-        pos: Fixed positions for nodes
-    """
-    # Map line IDs to colors
-    line_colors = {'R': 'red', 'G': 'green', 'B': 'blue', 'Y': 'yellow'}
-    
-    # Create a graph
-    G = nx.Graph()
-    
-    # Add nodes and edges based on line configuration
-    for line_id, config in line_config.items():
-        color = line_colors.get(line_id, 'black')  # Default to black if color not found
-        stations = config['stations']
-        for i in range(len(stations) - 1):
-            G.add_edge(stations[i], stations[i + 1], color=color)
-    
-    # Set up the plot
-    plt.figure(figsize=(12, 8))
-    
-    # Draw edges with respective colors
-    for edge in G.edges(data=True):
-        nx.draw_networkx_edges(G, pos, edgelist=[(edge[0], edge[1])], edge_color=edge[2]['color'], width=2)
-    
-    # Draw nodes
-    nx.draw_networkx_nodes(G, pos, node_color='lightblue', node_size=700, alpha=0.7)
-    
-    # Draw labels
-    nx.draw_networkx_labels(G, pos, font_size=10, font_weight='bold')
-    
-    plt.title("Lines with Respective Colors", pad=20, fontsize=14)
-    plt.axis('off')
     plt.tight_layout()
     plt.show()
