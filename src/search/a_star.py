@@ -39,7 +39,7 @@ class AStar:
             current_node = heapq.heappop(self.open_list)
             self.closed_set.add(current_node.position)
             
-            if current_node.position == goal_node.position:
+            if self.problem.is_goal(current_node.position, goal_node.position):
                 return self._reconstruct_path(current_node)
             
             self._evaluate_neighbors(current_node, goal_node)
