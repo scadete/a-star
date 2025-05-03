@@ -17,9 +17,9 @@ def create_fixed_layout(complete_graph: Dict[str, Dict[str, float]]) -> Dict[str
     G = nx.Graph()
     
     # Add edges with weights
-    for city1, neighbors in complete_graph.items():
-        for city2, distance in neighbors.items():
-            G.add_edge(city1, city2, weight=distance)
+    for node1, neighbors in complete_graph.items():
+        for node2, distance in neighbors.items():
+            G.add_edge(node1, node2, weight=distance)
     
     # Add all nodes from the graph
     for node in complete_graph.keys():
@@ -27,6 +27,7 @@ def create_fixed_layout(complete_graph: Dict[str, Dict[str, float]]) -> Dict[str
     
     # Generate layout once
     return nx.spring_layout(G, k=1.5, iterations=50, seed=42)
+
 def plot_graph(distances: Dict[str, Dict[str, float]], 
               path: List[str] = None,
               show_distances: bool = True,
@@ -48,9 +49,9 @@ def plot_graph(distances: Dict[str, Dict[str, float]],
     G = nx.Graph()
     
     # Add edges with weights
-    for city1, neighbors in distances.items():
-        for city2, distance in neighbors.items():
-            G.add_edge(city1, city2, weight=distance)
+    for node1, neighbors in distances.items():
+        for node2, distance in neighbors.items():
+            G.add_edge(node1, node2, weight=distance)
     
     # Set up the plot
     plt.figure(figsize=figsize)
@@ -63,7 +64,7 @@ def plot_graph(distances: Dict[str, Dict[str, float]],
         
     # Draw metro lines if configuration is provided
     if line_config:
-        line_colors = {'R': 'red', 'G': 'green', 'B': 'blue', 'Y': 'yellow'}
+        line_colors = {'R': 'red', 'G': 'green', 'B': 'blue', 'Y': 'gold'}
         
         # For each edge in distances, check if it belongs to a metro line
         for station1, neighbors in distances.items():
@@ -71,7 +72,7 @@ def plot_graph(distances: Dict[str, Dict[str, float]],
                 # Find which line (if any) this connection belongs to
                 for line_id, config in line_config.items():
                     stations = config['stations']
-                    # Check if both stations are in this line and consecutive
+                    # Check if both stations are in this line
                     if station1 in stations and station2 in stations:
                         color = line_colors.get(line_id, 'black')
                         nx.draw_networkx_edges(G, pos,
@@ -100,22 +101,20 @@ def plot_graph(distances: Dict[str, Dict[str, float]],
     # If path is provided, highlight it
     if path and len(path) > 1 and line_config:
         path_edges = list(zip(path[:-1], path[1:]))
-        line_colors = {'R': 'red', 'G': 'green', 'B': 'blue', 'Y': 'yellow'}
+        line_colors = {'R': 'red', 'G': 'green', 'B': 'blue', 'Y': 'gold'}
         
         for station1, station2 in path_edges:
             # Find which line this edge belongs to
             for line_id, config in line_config.items():
                 stations = config['stations']
                 if station1 in stations and station2 in stations:
-                    idx1, idx2 = stations.index(station1), stations.index(station2)
-                    if abs(idx1 - idx2) == 1:  # stations are consecutive in the line
-                        color = line_colors.get(line_id, 'red')
-                        # Draw highlighted edge with line's color
-                        nx.draw_networkx_edges(G, pos,
-                                            edgelist=[(station1, station2)],
-                                            edge_color=color,
-                                            width=4,  # thicker for highlighting
-                                            alpha=1.0)  # full opacity for highlight
+                    color = line_colors.get(line_id, 'gray')
+                    # Draw highlighted edge with line's color
+                    nx.draw_networkx_edges(G, pos,
+                                        edgelist=[(station1, station2)],
+                                        edge_color=color,
+                                        width=4,  # thicker for highlighting
+                                        alpha=1.0)  # full opacity for highlight
         
         # Highlight stations in path
         nx.draw_networkx_nodes(G, pos,
